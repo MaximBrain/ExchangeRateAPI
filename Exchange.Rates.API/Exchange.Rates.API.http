@@ -1,6 +1,11 @@
 @Exchange.Rates.API_HostAddress = http://localhost:5048
 
-GET {{Exchange.Rates.API_HostAddress}}/weatherforecast/
+GET {{Exchange.Rates.API_HostAddress}}/rates/USD/EUR
+Accept: application/json
+
+###
+
+GET {{Exchange.Rates.API_HostAddress}}/rates/EUR/USD
 Accept: application/json
 
 ###
