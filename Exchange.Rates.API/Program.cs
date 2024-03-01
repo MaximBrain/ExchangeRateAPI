@@ -1,6 +1,5 @@
 using Exchange.Rates.API;
 using Exchange.Rates.API.Extensions;
-using Exchange.Rates.API.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 

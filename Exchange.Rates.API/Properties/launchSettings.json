@@ -17,7 +17,7 @@
       "applicationUrl": "http://localhost:5048",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "AlphaVantageSettings:ApiKey": "NRHVJ9DPQPMKM6UE",
+        "AlphaVantageSettings:ApiKey": "..",
         "AlphaVantageSettings:BaseUrl": "https://www.alphavantage.co/"
       }
     },
