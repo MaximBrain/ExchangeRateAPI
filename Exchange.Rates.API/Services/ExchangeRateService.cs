@@ -23,6 +23,16 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
         return await AddToDatabase(rateCreationRequest);
     }
 
+    public async Task UpdateRate(CurrencyExchangeRate current, RateCreationRequest rateCreationRequest)
+    {
+        current.AskPrice = rateCreationRequest.AskPrice;
+        current.BidPrice = rateCreationRequest.BidPrice;
+        current.ExchangeRate = rateCreationRequest.ExchangeRate;
+        current.EffectiveDate = DateTime.UtcNow;
+        
+        await ApplicationDbContext.SaveChangesAsync();
+    }
+
     public async Task<CurrencyExchangeRate?> GetCurrentExchangeRate(string from, string to)
     {
         var exchangeRates = await ApplicationDbContext.ExchangeRates
@@ -31,10 +41,16 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
         return exchangeRates;
     }
 
+    public async Task DeleteRate(CurrencyExchangeRate current)
+    {
+        ApplicationDbContext.Set<CurrencyExchangeRate>().Remove(current);
+        await ApplicationDbContext.SaveChangesAsync();
+    }
+
     private async Task<CurrencyExchangeRate> Create(string from, string to)
     {
         var result = await AlphaVantageApi.GetRate(from, to);
-        return await AddToDatabase(result.CurrencyExchangeRate);
+        return await AddToDatabase(result.CurrencyExchangeRate!);
     }
 
     private async Task<CurrencyExchangeRate> AddToDatabase(AlphaVantageRate alphaVantageRate)
@@ -55,8 +71,7 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
             newFromCurrency, newToCurrency,
             decimal.Parse(alphaVantageRate.AskPrice),
             decimal.Parse(alphaVantageRate.BidPrice),
-            decimal.Parse(alphaVantageRate.ExchangeRate),
-            DateTime.Parse(alphaVantageRate.LastRefreshed));
+            decimal.Parse(alphaVantageRate.ExchangeRate));
 
         ApplicationDbContext.ExchangeRates.Add(exchangeRate);
 
@@ -78,9 +93,11 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
         };
         
         var exchangeRate = CreateCurrencyExchangeRate(
-            newFromCurrency, newToCurrency,
-            rateCreationRequest.AskPrice, rateCreationRequest.BidPrice,
-            rateCreationRequest.ExchangeRate, DateTime.UtcNow);
+            newFromCurrency,
+            newToCurrency,
+            rateCreationRequest.AskPrice,
+            rateCreationRequest.BidPrice,
+            rateCreationRequest.ExchangeRate);
 
         ApplicationDbContext.ExchangeRates.Add(exchangeRate);
 
@@ -94,8 +111,7 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
         Currency newToCurrency,
         decimal askPrice,
         decimal bidPrice,
-        decimal exchangeRate,
-        DateTime effectiveDate)
+        decimal exchangeRate)
     {
         var fromCurrency = ApplicationDbContext.Set<Currency>().AddIfNotExists(newFromCurrency,
             x => x.CurrencyCode == newFromCurrency.CurrencyCode);
@@ -106,7 +122,7 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
         {
             AskPrice = askPrice,
             BidPrice = bidPrice,
-            EffectiveDate = effectiveDate,
+            EffectiveDate = DateTime.UtcNow,
             ExchangeRate = exchangeRate,
             FromCurrency = fromCurrency,
             ToCurrency = toCurrency

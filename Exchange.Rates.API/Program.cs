@@ -54,4 +54,38 @@ app.MapPost("/rates",
     .WithName("CreateRates")
     .WithOpenApi();
 
+// Update Rates with ExchangeRateService help and return OK
+app.MapPut("/rates",
+        async (ExchangeRateService exchangeRateService, RateCreationRequest rateCreationRequest) =>
+        {
+            var current = await exchangeRateService.GetCurrentExchangeRate(rateCreationRequest.FromCurrency, rateCreationRequest.ToCurrency);
+            if (current == null)
+            {
+                return Results.Conflict("Rate doesn't exist.");
+            }
+        
+            await exchangeRateService.UpdateRate(current, rateCreationRequest);
+        
+            return Results.Ok();
+        })
+    .WithName("UpdateRates")
+    .WithOpenApi();
+
+// Delete Rates with ExchangeRateService help and return OK
+app.MapDelete("/rates/{from}/{to}",
+        async (ExchangeRateService exchangeRateService, string from, string to) =>
+        {
+            var current = await exchangeRateService.GetCurrentExchangeRate(from, to);
+            if (current == null)
+            {
+                return Results.Conflict("Rate doesn't exist.");
+            }
+        
+            await exchangeRateService.DeleteRate(current);
+        
+            return Results.Ok();
+        })
+    .WithName("DeleteRates")
+    .WithOpenApi();
+
 app.Run();

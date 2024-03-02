@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 
 namespace Exchange.Rates.API.Services;
 
+public class AlphaVantageException(string errorMessage) : Exception(errorMessage);
+
 public record AlphaVantageApi(HttpClient HttpClient, IOptions<AlphaVantageSettings> Settings, ILogger<AlphaVantageApi> Logger)
 {
     private const string CurrencyExchangeRateFunction = "CURRENCY_EXCHANGE_RATE";
@@ -25,4 +27,3 @@ public record AlphaVantageApi(HttpClient HttpClient, IOptions<AlphaVantageSettin
     }
 }
 
-public class AlphaVantageException(string errorMessage) : Exception(errorMessage);
