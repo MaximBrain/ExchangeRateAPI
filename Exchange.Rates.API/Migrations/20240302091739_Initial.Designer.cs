@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Exchange.Rates.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240301152612_Initial")]
+    [Migration("20240302091739_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -35,10 +35,9 @@ namespace Exchange.Rates.API.Migrations
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(3)");
 
                     b.Property<string>("CurrencyName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("CurrencyId");

@@ -17,8 +17,8 @@ namespace Exchange.Rates.API.Migrations
                 {
                     CurrencyId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CurrencyCode = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    CurrencyName = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    CurrencyCode = table.Column<string>(type: "nvarchar(3)", nullable: false),
+                    CurrencyName = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {

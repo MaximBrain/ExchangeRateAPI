@@ -32,10 +32,9 @@ namespace Exchange.Rates.API.Migrations
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(3)");
 
                     b.Property<string>("CurrencyName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("CurrencyId");

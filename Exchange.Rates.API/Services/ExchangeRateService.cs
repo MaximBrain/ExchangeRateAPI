@@ -26,8 +26,8 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
     public async Task<CurrencyExchangeRate?> GetCurrentExchangeRate(string from, string to)
     {
         var exchangeRates = await ApplicationDbContext.ExchangeRates
-            .FirstOrDefaultAsync(d => d.FromCurrency!.CurrencyCode == from
-                                      && d.ToCurrency!.CurrencyCode == to);
+            .FirstOrDefaultAsync(d => d.FromCurrency!.CurrencyCode == from.ToUpperInvariant()
+                                      && d.ToCurrency!.CurrencyCode == to.ToUpperInvariant());
         return exchangeRates;
     }
 
@@ -69,12 +69,12 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
     {
         var newFromCurrency = new Currency
         {
-            CurrencyCode = rateCreationRequest.FromCurrency,
+            CurrencyCode = rateCreationRequest.FromCurrency.ToUpperInvariant(),
         };
         
         var newToCurrency = new Currency
         {
-            CurrencyCode = rateCreationRequest.ToCurrency,
+            CurrencyCode = rateCreationRequest.ToCurrency.ToUpperInvariant(),
         };
         
         var exchangeRate = CreateCurrencyExchangeRate(

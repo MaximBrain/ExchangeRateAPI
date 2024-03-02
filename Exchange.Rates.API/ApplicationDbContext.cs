@@ -12,8 +12,9 @@ public class Currency
     public int CurrencyId { get; set; }
 
     [Required]
+    [Column(TypeName = "nvarchar(3)")]
     public string CurrencyCode { get; set; }
-    public string CurrencyName { get; set; }
+    public string? CurrencyName { get; set; }
 }
 
 [Index(nameof(FromCurrencyId), nameof(ToCurrencyId))]
@@ -31,13 +32,13 @@ public class CurrencyExchangeRate
 
     [ForeignKey("ToCurrencyId")] public Currency? ToCurrency { get; set; }
 
-    [Column(TypeName = "decimal(18,8)")] public required decimal ExchangeRate { get; set; }
+    [Column(TypeName = "decimal(18,8)")] public decimal ExchangeRate { get; set; }
 
-    [Column(TypeName = "decimal(18,8)")] public required decimal BidPrice { get; set; }
+    [Column(TypeName = "decimal(18,8)")] public decimal BidPrice { get; set; }
 
-    [Column(TypeName = "decimal(18,8)")] public required decimal AskPrice { get; set; }
+    [Column(TypeName = "decimal(18,8)")] public decimal AskPrice { get; set; }
 
-    public required DateTime EffectiveDate { get; set; }
+    public DateTime EffectiveDate { get; set; }
 }
 
 public class ApplicationDbContext : DbContext
@@ -54,6 +55,7 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Currency>().HasIndex(c => c.CurrencyCode).IsUnique();
+        
         modelBuilder.Entity<CurrencyExchangeRate>().HasIndex(c => new { c.FromCurrencyId, c.ToCurrencyId }).IsUnique();
         
         modelBuilder.Entity<CurrencyExchangeRate>().HasOne(c => c.FromCurrency)
