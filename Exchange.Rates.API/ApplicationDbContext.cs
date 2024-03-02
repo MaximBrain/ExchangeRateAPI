@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Exchange.Rates.API;
 
+[Index(nameof(CurrencyCode))]
 public class Currency
 {
     [Key]
@@ -12,8 +13,6 @@ public class Currency
 
     [Required]
     public string CurrencyCode { get; set; }
-
-    [Required]
     public string CurrencyName { get; set; }
 }
 

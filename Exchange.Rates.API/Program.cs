@@ -1,4 +1,6 @@
 using Exchange.Rates.API.Extensions;
+using Exchange.Rates.API.Middlewares;
+using Exchange.Rates.API.Models;
 using Exchange.Rates.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,26 +21,34 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Add middleware to handle exceptions
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseHttpsRedirection();
 
+// Get Rates with ExchangeRateService help and return result
 app.MapGet("/rates/{from}/{to}",
         async (ExchangeRateService exchangeRateService, string from, string to)  =>
     {
-        var rate = await exchangeRateService.GetRate(from, to);
+        var result = await exchangeRateService.GetRate(from, to);
         
-        // convert the rate to a string with fancy formatting
-        var formattedRate = rate.ToString("0.00##");
-        return Results.Ok($"1 {from} = {formattedRate} {to}");
+        return Results.Ok(new ExchangeRateResponse(result.ExchangeRate, result.BidPrice, result.AskPrice));
     })
     .WithName("GetRates")
     .WithOpenApi();
 
-app.MapPost(
-        "/rates/{from}/{to}/{amount:decimal}",
-        async (ExchangeRateService exchangeRateService, string from, string to, decimal amount) =>
+// Create Rates with ExchangeRateService help and return OK
+app.MapPost("/rates",
+        async (ExchangeRateService exchangeRateService, RateCreationRequest rateCreationRequest) =>
     {
-        // Create Rates with ExchangeRateService help and return OK
-        await exchangeRateService.CreateRate(from, to, amount);
+        var current = await exchangeRateService.GetCurrentExchangeRate(rateCreationRequest.FromCurrency, rateCreationRequest.ToCurrency);
+        if (current != null)
+        {
+            return Results.Conflict("Rate already exists.");
+        }
+        
+        await exchangeRateService.CreateRate(rateCreationRequest);
+        
         return Results.Ok();
     })
     .WithName("CreateRates")

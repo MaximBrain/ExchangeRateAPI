@@ -30,5 +30,8 @@ public record AlphaVantageRate
 public record AlphaVantageResponse
 {
     [JsonPropertyName("Realtime Currency Exchange Rate")]
-    public required AlphaVantageRate CurrencyExchangeRate { get; init; }
+    public AlphaVantageRate? CurrencyExchangeRate { get; init; }
+    
+    [JsonPropertyName("Error Message")]
+    public string? ErrorMessage { get; init; }
 }

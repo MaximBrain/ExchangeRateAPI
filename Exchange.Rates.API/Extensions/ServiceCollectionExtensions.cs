@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddLogging();
         services.AddOptions<AlphaVantageSettings>()
             .Configure<IConfiguration>((settings, conf) =>
             conf.GetSection(nameof(AlphaVantageSettings)).Bind(settings));

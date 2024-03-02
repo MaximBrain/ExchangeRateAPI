@@ -1,66 +1,116 @@
-﻿using System.Globalization;
-using Exchange.Rates.API.Extensions;
+﻿using Exchange.Rates.API.Extensions;
+using Exchange.Rates.API.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Exchange.Rates.API.Services;
 
 public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDbContext ApplicationDbContext)
 {
-    public async Task<decimal> GetRate(string from, string to)
+    public async Task<CurrencyExchangeRate> GetRate(string from, string to)
     {
-        var exchangeRates = ApplicationDbContext.ExchangeRates.Where(d =>
-            d.FromCurrency!.CurrencyCode == from && d.ToCurrency!.CurrencyCode == to).ToList();
+        var exchangeRates = await GetCurrentExchangeRate(from.ToUpperInvariant(), to.ToUpperInvariant());
 
-        if (!exchangeRates.Any())
+        if (exchangeRates != null)
         {
-            var result = await AlphaVantageApi.GetRate(from, to);
-            await AddToDatabase(from, to, result);
-            return decimal.Parse(result.CurrencyExchangeRate.ExchangeRate, CultureInfo.InvariantCulture);
+            return exchangeRates;
         }
-
-        if (exchangeRates.Count > 1)
-        {
-            throw new InvalidOperationException("Multiple exchange rates found.");
-        }
-
-        return exchangeRates.Single().ExchangeRate;
+        
+        return await Create(from, to);
     }
 
-    private async Task AddToDatabase(string from, string to, AlphaVantageResponse result)
+    public async Task<CurrencyExchangeRate> CreateRate(RateCreationRequest rateCreationRequest)
+    {
+        return await AddToDatabase(rateCreationRequest);
+    }
+
+    public async Task<CurrencyExchangeRate?> GetCurrentExchangeRate(string from, string to)
+    {
+        var exchangeRates = await ApplicationDbContext.ExchangeRates
+            .FirstOrDefaultAsync(d => d.FromCurrency!.CurrencyCode == from
+                                      && d.ToCurrency!.CurrencyCode == to);
+        return exchangeRates;
+    }
+
+    private async Task<CurrencyExchangeRate> Create(string from, string to)
+    {
+        var result = await AlphaVantageApi.GetRate(from, to);
+        return await AddToDatabase(result.CurrencyExchangeRate);
+    }
+
+    private async Task<CurrencyExchangeRate> AddToDatabase(AlphaVantageRate alphaVantageRate)
     {
         var newFromCurrency = new Currency
         {
-            CurrencyCode = result.CurrencyExchangeRate.FromCurrencyCode,
-            CurrencyName = result.CurrencyExchangeRate.FromCurrencyName
+            CurrencyCode = alphaVantageRate.FromCurrencyCode,
+            CurrencyName = alphaVantageRate.FromCurrencyName
         };
         
         var newToCurrency = new Currency
         {
-            CurrencyCode = result.CurrencyExchangeRate.ToCurrencyCode,
-            CurrencyName = result.CurrencyExchangeRate.ToCurrencyName
+            CurrencyCode = alphaVantageRate.ToCurrencyCode,
+            CurrencyName = alphaVantageRate.ToCurrencyName
         };
         
-        var fromCurrency = ApplicationDbContext.Set<Currency>().AddIfNotExists(newFromCurrency,
-            x => x.CurrencyCode == result.CurrencyExchangeRate.FromCurrencyCode);
-        var toCurrency = ApplicationDbContext.Set<Currency>().AddIfNotExists(newToCurrency,
-            x => x.CurrencyCode == result.CurrencyExchangeRate.ToCurrencyCode);
-
-        var exchangeRate = new CurrencyExchangeRate
-        {
-            AskPrice = decimal.Parse(result.CurrencyExchangeRate.AskPrice),
-            BidPrice = decimal.Parse(result.CurrencyExchangeRate.BidPrice),
-            EffectiveDate = DateTime.Parse(result.CurrencyExchangeRate.LastRefreshed),
-            ExchangeRate = decimal.Parse(result.CurrencyExchangeRate.ExchangeRate),
-            FromCurrency = fromCurrency,
-            ToCurrency = toCurrency
-        };
+        var exchangeRate = CreateCurrencyExchangeRate(
+            newFromCurrency, newToCurrency,
+            decimal.Parse(alphaVantageRate.AskPrice),
+            decimal.Parse(alphaVantageRate.BidPrice),
+            decimal.Parse(alphaVantageRate.ExchangeRate),
+            DateTime.Parse(alphaVantageRate.LastRefreshed));
 
         ApplicationDbContext.ExchangeRates.Add(exchangeRate);
 
         await ApplicationDbContext.SaveChangesAsync();
+
+        return exchangeRate;
     }
 
-    public async Task CreateRate(string from, string to, decimal amount)
+    private async Task<CurrencyExchangeRate> AddToDatabase(RateCreationRequest rateCreationRequest)
     {
-        throw new NotImplementedException();
+        var newFromCurrency = new Currency
+        {
+            CurrencyCode = rateCreationRequest.FromCurrency,
+        };
+        
+        var newToCurrency = new Currency
+        {
+            CurrencyCode = rateCreationRequest.ToCurrency,
+        };
+        
+        var exchangeRate = CreateCurrencyExchangeRate(
+            newFromCurrency, newToCurrency,
+            rateCreationRequest.AskPrice, rateCreationRequest.BidPrice,
+            rateCreationRequest.ExchangeRate, DateTime.UtcNow);
+
+        ApplicationDbContext.ExchangeRates.Add(exchangeRate);
+
+        await ApplicationDbContext.SaveChangesAsync();
+
+        return exchangeRate;
+    }
+
+    private CurrencyExchangeRate CreateCurrencyExchangeRate(
+        Currency newFromCurrency,
+        Currency newToCurrency,
+        decimal askPrice,
+        decimal bidPrice,
+        decimal exchangeRate,
+        DateTime effectiveDate)
+    {
+        var fromCurrency = ApplicationDbContext.Set<Currency>().AddIfNotExists(newFromCurrency,
+            x => x.CurrencyCode == newFromCurrency.CurrencyCode);
+        var toCurrency = ApplicationDbContext.Set<Currency>().AddIfNotExists(newToCurrency,
+            x => x.CurrencyCode == newToCurrency.CurrencyCode);
+
+        var currencyExchangeRate = new CurrencyExchangeRate
+        {
+            AskPrice = askPrice,
+            BidPrice = bidPrice,
+            EffectiveDate = effectiveDate,
+            ExchangeRate = exchangeRate,
+            FromCurrency = fromCurrency,
+            ToCurrency = toCurrency
+        };
+        return currencyExchangeRate;
     }
 }
