@@ -1,10 +1,8 @@
-﻿using Exchange.Rates.API.Extensions;
-using Exchange.Rates.API.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Exchange.Rates.API.Models;
 
 namespace Exchange.Rates.API.Services;
 
-public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDbContext ApplicationDbContext)
+public record ExchangeRateService(IAlphaVantageApi AlphaVantageApi, IRepository RatesRepository)
 {
     public async Task<CurrencyExchangeRate> GetRate(string from, string to)
     {
@@ -18,92 +16,35 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
         return await Create(from, to);
     }
 
-    public async Task<CurrencyExchangeRate> CreateRate(RateCreationRequest rateCreationRequest)
+    public Task CreateRate(RateCreationRequest rateCreationRequest)
     {
-        return await AddToDatabase(rateCreationRequest);
+        return AddToDatabase(rateCreationRequest);
     }
 
-    public async Task UpdateRate(CurrencyExchangeRate current, RateCreationRequest rateCreationRequest)
+    public Task UpdateRate(CurrencyExchangeRate current, RateCreationRequest rateCreationRequest)
     {
         current.AskPrice = rateCreationRequest.AskPrice;
         current.BidPrice = rateCreationRequest.BidPrice;
         current.ExchangeRate = rateCreationRequest.ExchangeRate;
         current.EffectiveDate = DateTime.UtcNow;
         
-        await ApplicationDbContext.SaveChangesAsync();
+        return RatesRepository.SaveChangesAsync();
     }
 
-    public async Task<CurrencyExchangeRate?> GetCurrentExchangeRate(string from, string to)
+    public Task<CurrencyExchangeRate?> GetCurrentExchangeRate(string from, string to)
     {
-        var exchangeRates = await ApplicationDbContext.ExchangeRates
-            .FirstOrDefaultAsync(d => d.FromCurrency!.CurrencyCode == from.ToUpperInvariant()
-                                      && d.ToCurrency!.CurrencyCode == to.ToUpperInvariant());
-        return exchangeRates;
+        return RatesRepository.GetCurrentExchangeRate(from, to);
     }
 
-    public async Task DeleteRate(CurrencyExchangeRate current)
+    public Task DeleteRate(CurrencyExchangeRate current)
     {
-        ApplicationDbContext.Set<CurrencyExchangeRate>().Remove(current);
-        await ApplicationDbContext.SaveChangesAsync();
+        return RatesRepository.DeleteRate(current);
     }
 
     private async Task<CurrencyExchangeRate> Create(string from, string to)
     {
         var result = await AlphaVantageApi.GetRate(from, to);
         return await AddToDatabase(result.CurrencyExchangeRate!);
-    }
-
-    private async Task<CurrencyExchangeRate> AddToDatabase(AlphaVantageRate alphaVantageRate)
-    {
-        var newFromCurrency = new Currency
-        {
-            CurrencyCode = alphaVantageRate.FromCurrencyCode,
-            CurrencyName = alphaVantageRate.FromCurrencyName
-        };
-        
-        var newToCurrency = new Currency
-        {
-            CurrencyCode = alphaVantageRate.ToCurrencyCode,
-            CurrencyName = alphaVantageRate.ToCurrencyName
-        };
-        
-        var exchangeRate = CreateCurrencyExchangeRate(
-            newFromCurrency, newToCurrency,
-            decimal.Parse(alphaVantageRate.AskPrice),
-            decimal.Parse(alphaVantageRate.BidPrice),
-            decimal.Parse(alphaVantageRate.ExchangeRate));
-
-        ApplicationDbContext.ExchangeRates.Add(exchangeRate);
-
-        await ApplicationDbContext.SaveChangesAsync();
-
-        return exchangeRate;
-    }
-
-    private async Task<CurrencyExchangeRate> AddToDatabase(RateCreationRequest rateCreationRequest)
-    {
-        var newFromCurrency = new Currency
-        {
-            CurrencyCode = rateCreationRequest.FromCurrency.ToUpperInvariant(),
-        };
-        
-        var newToCurrency = new Currency
-        {
-            CurrencyCode = rateCreationRequest.ToCurrency.ToUpperInvariant(),
-        };
-        
-        var exchangeRate = CreateCurrencyExchangeRate(
-            newFromCurrency,
-            newToCurrency,
-            rateCreationRequest.AskPrice,
-            rateCreationRequest.BidPrice,
-            rateCreationRequest.ExchangeRate);
-
-        ApplicationDbContext.ExchangeRates.Add(exchangeRate);
-
-        await ApplicationDbContext.SaveChangesAsync();
-
-        return exchangeRate;
     }
 
     private CurrencyExchangeRate CreateCurrencyExchangeRate(
@@ -113,10 +54,8 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
         decimal bidPrice,
         decimal exchangeRate)
     {
-        var fromCurrency = ApplicationDbContext.Set<Currency>().AddIfNotExists(newFromCurrency,
-            x => x.CurrencyCode == newFromCurrency.CurrencyCode);
-        var toCurrency = ApplicationDbContext.Set<Currency>().AddIfNotExists(newToCurrency,
-            x => x.CurrencyCode == newToCurrency.CurrencyCode);
+        var fromCurrency = RatesRepository.AddCurrencyIfNotExists(newFromCurrency);
+        var toCurrency = RatesRepository.AddCurrencyIfNotExists(newToCurrency);
 
         var currencyExchangeRate = new CurrencyExchangeRate
         {
@@ -128,5 +67,44 @@ public record ExchangeRateService(AlphaVantageApi AlphaVantageApi, ApplicationDb
             ToCurrency = toCurrency
         };
         return currencyExchangeRate;
+    }
+    
+    private async Task<CurrencyExchangeRate> AddToDatabase(AlphaVantageRate alphaVantageRate)
+    {
+        var newFromCurrency = CreateCurrency(alphaVantageRate.FromCurrencyCode, alphaVantageRate.FromCurrencyName);
+        var newToCurrency = CreateCurrency(alphaVantageRate.ToCurrencyCode, alphaVantageRate.ToCurrencyName);
+        
+        var exchangeRate = CreateCurrencyExchangeRate(
+            newFromCurrency, newToCurrency,
+            decimal.Parse(alphaVantageRate.AskPrice),
+            decimal.Parse(alphaVantageRate.BidPrice),
+            decimal.Parse(alphaVantageRate.ExchangeRate));
+
+        return await SaveExchangeRate(exchangeRate);
+    }
+    private async Task<CurrencyExchangeRate> AddToDatabase(RateCreationRequest rateCreationRequest)
+    {
+        var newFromCurrency = CreateCurrency(rateCreationRequest.FromCurrency.ToUpperInvariant());
+        var newToCurrency = CreateCurrency(rateCreationRequest.ToCurrency.ToUpperInvariant());
+        
+        var exchangeRate = CreateCurrencyExchangeRate(
+            newFromCurrency, newToCurrency,
+            rateCreationRequest.AskPrice,
+            rateCreationRequest.BidPrice,
+            rateCreationRequest.ExchangeRate);
+
+        return await SaveExchangeRate(exchangeRate);
+    }
+    private static Currency CreateCurrency(string currencyCode, string? currencyName = null)
+    {
+        return new Currency
+        {
+            CurrencyCode = currencyCode,
+            CurrencyName = currencyName
+        };
+    }
+    private Task<CurrencyExchangeRate> SaveExchangeRate(CurrencyExchangeRate exchangeRate)
+    {
+        return RatesRepository.AddToDatabase(exchangeRate);
     }
 }

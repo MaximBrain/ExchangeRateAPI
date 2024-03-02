@@ -5,13 +5,18 @@ namespace Exchange.Rates.API.Services;
 
 public class AlphaVantageException(string errorMessage) : Exception(errorMessage);
 
-public record AlphaVantageApi(HttpClient HttpClient, IOptions<AlphaVantageSettings> Settings, ILogger<AlphaVantageApi> Logger)
+public interface IAlphaVantageApi
+{
+    Task<AlphaVantageResponse> GetRate(string from, string to);
+}
+
+public record AlphaVantageApi(HttpClient HttpClient, IOptions<AlphaVantageSettings> OptionsSetting): IAlphaVantageApi
 {
     private const string CurrencyExchangeRateFunction = "CURRENCY_EXCHANGE_RATE";
-
+    
     public async Task<AlphaVantageResponse> GetRate(string from, string to)
     {
-        var settings = Settings.Value;
+        var settings = OptionsSetting.Value;
         var response = await HttpClient.GetAsync(
             $"query?function={CurrencyExchangeRateFunction}&from_currency={from}&to_currency={to}&apikey={settings.ApiKey}");
 

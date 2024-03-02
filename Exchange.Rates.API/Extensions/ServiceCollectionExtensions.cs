@@ -15,7 +15,8 @@ public static class ServiceCollectionExtensions
             conf.GetSection(nameof(AlphaVantageSettings)).Bind(settings));
 
         services.AddScoped<ExchangeRateService>();
-        services.AddHttpClient<AlphaVantageApi>((provider, client) =>
+        services.AddScoped<IRepository, RatesRepository>();
+        services.AddHttpClient<IAlphaVantageApi, AlphaVantageApi>((provider, client) =>
         {
             var settings = provider.GetRequiredService<IOptions<AlphaVantageSettings>>().Value;
             client.BaseAddress = new Uri(settings.BaseUrl ?? throw new InvalidOperationException("AlphaVantage BaseUrl not configured."));
