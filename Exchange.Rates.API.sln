@@ -6,6 +6,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 	ProjectSection(SolutionItems) = preProject
 		global.json = global.json
 		.gitignore = .gitignore
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Exchange.Rates.Api.Test", "Exchange.Rates.Api.Test\Exchange.Rates.Api.Test.csproj", "{34E0CAF0-A887-4B90-B6F5-3CEB085446BC}"
