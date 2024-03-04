@@ -73,7 +73,7 @@ This guide will help you to set up and run your .NET 8 application with Swagger 
 1. Clone your repository or Extract your .NET 8 project to your local machine.
 
 2. Open Command Prompt, navigate to your project directory that contains the `.csproj` file.
-`cd path_to_your_project_folder`
+`cd ../Exchange.Rates.API`
 3. To build the project use the following .NET CLI command:
 `dotnet build`
 4. Apply the migration to the database to create the schema:
@@ -123,7 +123,7 @@ NUnit is a popular unit-testing framework for .NET. Here are steps to run NUnit 
 2. Open Command Prompt, navigate to your test project directory that contains the `.csproj` file:
 
     ```bash
-    cd path_to_your_test_project_folder
+    cd ../Exchange.Rates.API.Test.csproj
     ```
 
 3. Build your tests project:
@@ -143,14 +143,10 @@ NUnit is a popular unit-testing framework for .NET. Here are steps to run NUnit 
 5. If you want to run specific tests, use the filter option:
 
     ```bash
-    dotnet test --filter FullyQualifiedName~Namespace.ClassName.MethodName
+    dotnet test --filter Exchange.Rates.Api.Test.ExchangeRatesControllerTests.GetRate_ShouldReturnCurrentExchangeRate_WhenExists
     ```
 
-   Replace `Namespace.ClassName.MethodName` with the full name of your test.
-
 The results are displayed in the terminal. The results include the status of each test (passed or failed) and overall statistics.
-
-Remember to replace `path_to_your_test_project_folder` and `Namespace.ClassName.MethodName` according to your project's structure. Enjoy testing!
 
 ## Summary
 

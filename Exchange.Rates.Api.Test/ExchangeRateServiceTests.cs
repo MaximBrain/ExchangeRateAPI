@@ -9,11 +9,11 @@ public class ExchangeRateServiceTests
 {
     // Arrange
     private const string FromCurrency = "USD", ToCurrency = "EUR";
-    
+
     private Mock<IAlphaVantageApi> _alphaVantageApiMock = null!;
     private Mock<IRepository> _ratesRepoMock = null!;
     private ExchangeRateService _service = null!;
-    
+
     [SetUp]
     public void Setup()
     {
@@ -22,10 +22,12 @@ public class ExchangeRateServiceTests
         _service = new ExchangeRateService(_alphaVantageApiMock.Object, _ratesRepoMock.Object);
     }
 
-        [Test]
+    [Test]
     public async Task GetRate_ShouldReturnCurrentExchangeRate_WhenExists()
     {
-        var currentRate = new CurrencyExchangeRate { // Assumes the object declaration
+        var currentRate = new CurrencyExchangeRate
+        {
+            // Assumes the object declaration
             // Initial values
         };
 
@@ -42,13 +44,15 @@ public class ExchangeRateServiceTests
     public async Task CreateRate_ShouldAddToDatabase()
     {
         // Arrange
-        var rateCreationRequest = new RateCreationRequest { // Assumes the object declaration 
+        var rateCreationRequest = new RateCreationRequest
+        {
+            // Assumes the object declaration 
             FromCurrency = FromCurrency,
             ToCurrency = ToCurrency
         };
 
         _ratesRepoMock.Setup(r => r.AddCurrencyIfNotExists(It.IsAny<Currency>())).Returns(new Currency());
-        
+
         // Act
         await _service.CreateRate(rateCreationRequest);
 
@@ -60,13 +64,17 @@ public class ExchangeRateServiceTests
     public async Task UpdateRate_ShouldUpdateCurrentRate()
     {
         // Arrange
-        var currentRate = new CurrencyExchangeRate { // Assumes the object declaration 
+        var currentRate = new CurrencyExchangeRate
+        {
+            // Assumes the object declaration 
             BidPrice = 1,
             AskPrice = 1,
             ExchangeRate = 1,
         };
 
-        var rateCreationRequest = new RateCreationRequest { // Assumes the object declaration 
+        var rateCreationRequest = new RateCreationRequest
+        {
+            // Assumes the object declaration 
             FromCurrency = FromCurrency,
             ToCurrency = ToCurrency,
             BidPrice = 2,
@@ -91,7 +99,9 @@ public class ExchangeRateServiceTests
     public async Task DeleteRate_ShouldDeleteCurrentRate()
     {
         // Arrange
-        var currentRate = new CurrencyExchangeRate { // Assumes the object declaration 
+        var currentRate = new CurrencyExchangeRate
+        {
+            // Assumes the object declaration 
             // Initial values
         };
 
