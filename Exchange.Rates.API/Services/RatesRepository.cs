@@ -29,8 +29,8 @@ public record RatesRepository(ApplicationDbContext ApplicationDbContext): IRepos
     public async Task<CurrencyExchangeRate?> GetCurrentExchangeRate(string from, string to)
     {
         var exchangeRates = await ApplicationDbContext.ExchangeRates
-            .FirstOrDefaultAsync(d => d.FromCurrency!.CurrencyCode.Equals(from, StringComparison.InvariantCultureIgnoreCase)
-                                      && d.ToCurrency!.CurrencyCode.Equals(to, StringComparison.InvariantCultureIgnoreCase));
+            .FirstOrDefaultAsync(d => d.FromCurrency!.CurrencyCode == from.ToUpperInvariant()
+                                      && d.ToCurrency!.CurrencyCode == to.ToUpperInvariant());
         return exchangeRates;
     }
 
