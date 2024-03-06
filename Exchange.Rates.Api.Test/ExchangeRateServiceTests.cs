@@ -23,21 +23,68 @@ public class ExchangeRateServiceTests
     }
 
     [Test]
-    public async Task GetRate_ShouldReturnCurrentExchangeRate_WhenExists()
+    public async Task GetRate_WhenRateExists_ReturnsRateFromRepository()
     {
-        var currentRate = new CurrencyExchangeRate
-        {
-            // Assumes the object declaration
-            // Initial values
-        };
+        // Arrange
+        var from = "USD";
+        var to = "EUR";
+        var expectedRate = new CurrencyExchangeRate();
 
-        _ratesRepoMock.Setup(r => r.GetCurrentExchangeRate(FromCurrency, ToCurrency)).ReturnsAsync(currentRate);
+        _ratesRepoMock.Setup(x => x.GetCurrentExchangeRate(from, to))
+            .ReturnsAsync(expectedRate);
 
         // Act
-        var result = await _service.GetRate(FromCurrency, ToCurrency);
+        var result = await _service.GetRate(from, to);
 
         // Assert
-        Assert.That(result, Is.EqualTo(currentRate));
+        Assert.That(result, Is.EqualTo(expectedRate));
+        _alphaVantageApiMock.Verify(x => x.GetRate(from, to), Times.Never);
+        _ratesRepoMock.Verify(x => x.GetCurrentExchangeRate(from, to), Times.Once);
+    }
+
+    [Test]
+    public async Task GetRate_WhenRateDoesNotExist_ReturnsRateFromAlphaVantageApi()
+    {
+        // Arrange
+        var from = "USD";
+        var to = "EUR";
+        var alphaVantageResponse = new AlphaVantageResponse
+        {
+            CurrencyExchangeRate = new AlphaVantageRate()
+            {
+                AskPrice = "1.1",
+                BidPrice = "1.2",
+                ExchangeRate = "1.3"
+            }
+        };
+
+        var expectedRate = new CurrencyExchangeRate()
+        {
+            AskPrice = 1.1m,
+            BidPrice = 1.2m,
+            ExchangeRate = 1.3m
+        };
+
+        _ratesRepoMock.Setup(x =>
+                x.GetCurrentExchangeRate(from, to))
+            .ReturnsAsync((CurrencyExchangeRate?)null);
+        _alphaVantageApiMock.Setup(x => x.GetRate(from, to)).ReturnsAsync(alphaVantageResponse);
+        _ratesRepoMock.Setup(x =>
+                x.AddToDatabase(It.IsAny<CurrencyExchangeRate>())).ReturnsAsync((CurrencyExchangeRate rate) => rate);
+
+        // Act
+        var actual = await _service.GetRate(from, to);
+
+        Assert.Multiple(() =>
+        {
+            // Assert
+            Assert.That(actual.BidPrice, Is.EqualTo(expectedRate.BidPrice));
+            Assert.That(actual.AskPrice, Is.EqualTo(expectedRate.AskPrice));
+            Assert.That(actual.ExchangeRate, Is.EqualTo(expectedRate.ExchangeRate));
+        });
+
+        _alphaVantageApiMock.Verify(x => x.GetRate(from, to), Times.Once);
+        _ratesRepoMock.Verify(x => x.GetCurrentExchangeRate(from, to), Times.Once);
     }
 
     [Test]
